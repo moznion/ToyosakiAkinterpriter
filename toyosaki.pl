@@ -3,7 +3,6 @@
 use strict;
 use warnings;
 use utf8;
-use Encode;
 use 5.010;
 use open IN => ":utf8";
 use open OUT => ":utf8";
