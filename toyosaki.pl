@@ -128,7 +128,6 @@ for(;;) {
 			exit(1);
 		}
 	}
-
 	
 	# Jump if top of the stack equals zero.
 	elsif ($tokens =~ s/^NTS//) {
@@ -199,6 +198,8 @@ for(;;) {
 	}
 
 }
+
+###########################################################################################
 
 sub lexicalAnalyze {
 	my($inputFilename) = @_;
