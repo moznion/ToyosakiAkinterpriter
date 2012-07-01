@@ -13,40 +13,20 @@ unless(defined($ARGV[0])) {
 	exit(1);
 }
 
-my $inputFilename = $ARGV[0];
-open(FH, $inputFilename);
-
-# Stack commands.
-my @commands;
-foreach(<FH>) {
-	s/\x0D?\x0A$//g; # chomp
-	for(;;) {
-		if(s/^はぁ、豊崎愛生さん…//) {
-			push(@commands, "S");
-		} elsif (s/^僕は…//) {
-			push(@commands, "T");
-		} elsif (s/^もう…！//) {
-			push(@commands, "N");
-		} elsif (s/^.//) {
-		} else {
-			last;
-		}
-	}
-}
-
-my $command = join('', @commands);
+# Lex
+my $tokens = &lexicalAnalyze($ARGV[0]);
 
 # Process
 my $address;
 my @stack;
-my $commandClone = $command;
+my $commandClone = $tokens;
 my $tempClonedCommand;
 my $beforeSubRoutineCall;
 for(;;) {
 
 	# Push to stack
-	if ($command =~ s/^(SS)//) {
-		$command =~ s/^([S|T]*)N//;
+	if ($tokens =~ s/^(SS)//) {
+		$tokens =~ s/^([S|T]*)N//;
 
 		my $num = $1;
 		$num =~ s/S/0/g; $num =~ s/T/1/g;
@@ -54,56 +34,56 @@ for(;;) {
 		unshift(@stack, $dec);
 
 	# Copy top of stack
-	} elsif ($command =~ s/^SNS//) {
+	} elsif ($tokens =~ s/^SNS//) {
 		unshift(@stack, $stack[0]);
 
 	# Swap top of stack between the second of stack
-	} elsif ($command =~ s/^SNT//) {
+	} elsif ($tokens =~ s/^SNT//) {
 		my $fst = shift(@stack);
 		my $snd = shift(@stack);
 		unshift(@stack, $snd);
 		unshift(@stack, $fst);
 
 	# Drop top of stack
-	} elsif ($command =~ s/^SNN//) {
+	} elsif ($tokens =~ s/^SNN//) {
 		shift(@stack);
 
 	# Add
-	} elsif ($command =~ s/^TSSS//) {
+	} elsif ($tokens =~ s/^TSSS//) {
 		my $fst = shift(@stack);
 		my $snd = shift(@stack);
 		unshift(@stack, ($fst + $snd));
 
 	# Sub
-	} elsif ($command =~ s/^TSST//) {
+	} elsif ($tokens =~ s/^TSST//) {
 		my $fst = shift(@stack);
 		my $snd = shift(@stack);
 		unshift(@stack, ($fst - $snd));
 
 	# Mult
-	} elsif ($command =~ s/^TSSN//) {
+	} elsif ($tokens =~ s/^TSSN//) {
 		my $fst = shift(@stack);
 		my $snd = shift(@stack);
 		unshift(@stack, ($fst * $snd));
 
 	# Div
-	} elsif ($command =~ s/^TSTS//) {
+	} elsif ($tokens =~ s/^TSTS//) {
 		my $fst = shift(@stack);
 		my $snd = shift(@stack);
 		unshift(@stack, ($fst / $snd));
 
 	# Mod
-	} elsif ($command =~ s/^TSTT//) {
+	} elsif ($tokens =~ s/^TSTT//) {
 		my $fst = shift(@stack);
 		my $snd = shift(@stack);
 		unshift(@stack, ($fst % $snd));
 
 	# Store value to address
-	} elsif ($command =~ s/^TTS//) {
+	} elsif ($tokens =~ s/^TTS//) {
 		$address = shift(@stack);
 
 	# Unstore value from address to stack
-	} elsif ($command =~ s/^TTT//) {
+	} elsif ($tokens =~ s/^TTT//) {
 		if(defined($address)) {
 			unshift(@stack, $address);
 		} else {
@@ -112,60 +92,60 @@ for(;;) {
 		}
 
 	# Output character of top of the stack
-	} elsif ($command =~ s/TNSS//) {
+	} elsif ($tokens =~ s/TNSS//) {
 		print (pack "C*", shift(@stack));
 
 	# Output number of top of the stack
-	} elsif ($command =~ s/TNST//) {
+	} elsif ($tokens =~ s/TNST//) {
 		print (shift(@stack));
 
 	# Set label
-	} elsif ($command =~ s/(NSS)//) {
-		$command =~ s/^([S|T]*)N//;
+	} elsif ($tokens =~ s/(NSS)//) {
+		$tokens =~ s/^([S|T]*)N//;
 
 	# Call sub routine
-	} elsif ($command =~ s/^(NST)//) {
-		$command =~ s/^([S|T]*)N//;
+	} elsif ($tokens =~ s/^(NST)//) {
+		$tokens =~ s/^([S|T]*)N//;
 		my $subRoutineLabel = $1;
 		$tempClonedCommand = $commandClone;
 		$tempClonedCommand =~ s/^[S|T|N]*NSS${subRoutineLabel}N//;
-		$beforeSubRoutineCall = $command;
-		$command = $tempClonedCommand;
+		$beforeSubRoutineCall = $tokens;
+		$tokens = $tempClonedCommand;
 
 	# Unconfitional Jump
-	} elsif ($command =~ s/^(NSN)//) {
-		$command =~ s/^([S|T]*)N//;
+	} elsif ($tokens =~ s/^(NSN)//) {
+		$tokens =~ s/^([S|T]*)N//;
 		my $unconJumpLabel = $1;
 		$tempClonedCommand = $commandClone;
 		$tempClonedCommand =~ s/^[S|T|N]*NSS${unconJumpLabel}N//;
-		$command = $tempClonedCommand;
+		$tokens = $tempClonedCommand;
 	
 	# JZ
-	} elsif ($command =~ s/^(NTS)//) {
-		$command =~ s/^([S|T]*)N//;
+	} elsif ($tokens =~ s/^(NTS)//) {
+		$tokens =~ s/^([S|T]*)N//;
 		my $jzLabel = $1;
 		if ($stack[0] == 0) {
 			$tempClonedCommand = $commandClone;
 			$tempClonedCommand =~ s/^[S|T|N]*NSS${jzLabel}N//;
-			$command = $tempClonedCommand;
+			$tokens = $tempClonedCommand;
 		}
 
 	# JM
-	} elsif ($command =~ s/^(NTT)//) {
-		$command =~ s/^([S|T]*)N//;
+	} elsif ($tokens =~ s/^(NTT)//) {
+		$tokens =~ s/^([S|T]*)N//;
 		my $jmLabel = $1;
 		if ($stack[0] < 0) {
 			$tempClonedCommand = $commandClone;
 			$tempClonedCommand =~ s/^[S|T|N]*NSS${jmLabel}N//;
-			$command = $tempClonedCommand;
+			$tokens = $tempClonedCommand;
 		}
 
 	# End of Sub Routine
-	} elsif ($command =~ s/^NTN//) {
-		$command = $beforeSubRoutineCall;
+	} elsif ($tokens =~ s/^NTN//) {
+		$tokens = $beforeSubRoutineCall;
 
 	# End of Programm
-	} elsif ($command =~ s/^NNN//) {
+	} elsif ($tokens =~ s/^NNN//) {
 		last;
 
 	# Error
@@ -175,8 +155,33 @@ for(;;) {
 	}
 
 	# End? (Command Strings are null)
-	if ($command eq '') {
+	if ($tokens eq '') {
 		last;
 	}
 
+}
+
+sub lexicalAnalyze {
+	my($inputFilename) = @_;
+	open(FH, $inputFilename);
+
+	my @tokenList;
+	foreach(<FH>) {
+		s/\x0D?\x0A$//g; # chomp
+		for(;;) {
+			if(s/^はぁ、豊崎愛生さん…//) {
+				push(@tokenList, "S");
+			} elsif (s/^僕は…//) {
+				push(@tokenList, "T");
+			} elsif (s/^もう…！//) {
+				push(@tokenList, "N");
+			} elsif (s/^.//) {
+				# Nothing to do.
+			} else {
+				last;
+			}
+		}
+	}
+
+	return join('', @tokenList);
 }
