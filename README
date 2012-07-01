@@ -1,0 +1,23 @@
+はぁ、豊崎愛生さん…
+
+
+
+
+
+僕は…
+
+
+
+
+
+もう…！
+
+の3種類の言葉のみで記述できるインタプリタです。
+お気づきの通りWhitespace のクローンです。
+
+<使い方>
+perl toyosaki.pl [プログラムを記述したファイル名]
+
+<例>
+perl toyosaki.pl hello.ta
+-> Hello World
