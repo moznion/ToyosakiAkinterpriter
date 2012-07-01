@@ -21,7 +21,7 @@ my @stack;
 my $address;
 my $clonedTokens = $tokens;
 my $tempClonedTokens;
-my $tokensBeforeCalledSubRoutine;
+my @tokensBeforeCalledSubRoutine;
 
 # Dispatch
 for(;;) {
@@ -169,7 +169,7 @@ for(;;) {
 
 		$tempClonedTokens = $clonedTokens;
 		if($tempClonedTokens =~ s/^[S|T|N]*NSS${subRoutineLabel}N//) {
-			$tokensBeforeCalledSubRoutine = $tokens;
+			unshift(@tokensBeforeCalledSubRoutine, $tokens);
 			$tokens = $tempClonedTokens;
 		} else {
 				say "Error: Label (".&replaceToken2Word($subRoutineLabel).") is not defined.";
@@ -179,7 +179,7 @@ for(;;) {
 
 	# End of Sub Routine
 	elsif ($tokens =~ s/^NTN//) {
-		$tokens = $tokensBeforeCalledSubRoutine;
+		$tokens = shift(@tokensBeforeCalledSubRoutine);
 	}
 
 	# End of Programm
